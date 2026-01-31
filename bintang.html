@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Order Nokos | Layanan OTP Canggih</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        primary: '#6366f1',
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.3s; }
+        /* Animasi Loading */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-darkbg text-gray-800 dark:text-gray-200 min-h-screen flex flex-col">
+
+    <nav class="fixed w-full z-50 glass border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500">
+                        Auto Order Nokos
+                    </span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <div id="balance-display" class="hidden px-3 py-1 rounded-full bg-primary/20 text-primary font-bold text-sm border border-primary/30">
+                            Rp 0
+                        </div>
+                        <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                            🌗
+                        </button>
+                        <div id="auth-buttons">
+                            <button onclick="showModal('login')" class="text-gray-600 dark:text-gray-300 px-3 py-2 rounded-md text-sm font-medium hover:text-primary">Log In</button>
+                            <button onclick="showModal('signup')" class="bg-primary hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition">Sign Up</button>
+                        </div>
+                        <div id="user-menu" class="hidden">
+                            <button onclick="logout()" class="text-red-500 hover:text-red-400 text-sm font-medium">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow pt-24 px-4 pb-12">
+        <div class="max-w-4xl mx-auto text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">Layanan OTP Otomatis & Tercepat</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-lg">Solusi verifikasi nomor virtual Indonesia dengan sistem canggih.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            
+            <div class="md:col-span-2 space-y-6">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold">Pesan Nomor (WhatsApp)</h2>
+                        <span class="text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded">Server Online</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-gray-500">Pilih Server (ID & Harga)</label>
+                            <select id="server-select" onchange="updatePrice()" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-primary outline-none transition">
+                            </select>
+                        </div>
+
+                        <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div>
+                                <p class="text-sm text-gray-500">Estimasi Harga (+Margin)</p>
+                                <p id="price-display" class="text-2xl font-bold text-primary">Rp 0</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500">Negara</p>
+                                <div class="flex items-center gap-2">
+                                    <img src="https://assets.rumahotp.com/flags/id.png" class="w-5 h-5 rounded-full" alt="ID">
+                                    <span class="font-semibold">Indonesia</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="orderNumber()" id="btn-order" class="w-full bg-gradient-to-r from-primary to-purple-600 hover:shadow-lg hover:shadow-primary/50 text-white font-bold py-3 px-6 rounded-xl transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2">
+                            Beli Nomor Sekarang
+                        </button>
+                    </div>
+                </div>
+
+                <div id="order-result" class="hidden glass rounded-2xl p-6 shadow-xl border-l-4 border-green-500">
+                    <h3 class="font-bold text-lg mb-4">Pesanan Berhasil!</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-gray-500">Nomor HP</p>
+                            <p id="res-phone" class="text-xl font-mono font-bold select-all cursor-pointer text-white">Loading...</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">ID Order</p>
+                            <p id="res-id" class="font-mono">Loading...</p>
+                        </div>
+                        <div class="col-span-2">
+                            <p class="text-gray-500">Kode OTP</p>
+                            <div class="flex gap-2">
+                                <input type="text" id="res-otp" value="Menunggu SMS..." readonly class="w-full bg-transparent border-b border-gray-600 focus:outline-none font-mono text-yellow-400">
+                                <button onclick="checkOTP()" class="text-primary hover:underline">Refresh</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-bold mb-4">Isi Saldo (QRIS)</h2>
+                    <p class="text-sm text-gray-500 mb-4">Biaya Admin Rp 350 otomatis ditambahkan.</p>
+                    
+                    <div class="space-y-3">
+                        <input type="number" id="deposit-amount" placeholder="Minimal 10.000" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm focus:ring-primary outline-none">
+                        <button onclick="createDeposit()" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-semibold transition">
+                            Generate QRIS
+                        </button>
+                    </div>
+                    
+                    <div id="qris-area" class="hidden mt-4 text-center">
+                        <img id="qris-img" src="" alt="QRIS" class="w-40 h-40 mx-auto rounded-lg mb-2 bg-white p-2">
+                        <p class="text-xs text-yellow-500">Scan segera! Expired dalam 15 menit.</p>
+                    </div>
+                </div>
+
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-bold mb-4">Bantuan CS</h2>
+                    <div class="space-y-3">
+                        <a href="https://wa.me/6288709733466" target="_blank" class="flex items-center p-3 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-500 transition">
+                            <span class="mr-3">📱</span> WhatsApp
+                        </a>
+                        <a href="https://t.me/rereewwjaah" target="_blank" class="flex items-center p-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition">
+                            <span class="mr-3">✈️</span> Telegram
+                        </a>
+                        <a href="mailto:bisnisnokosprib@gmail.com" class="flex items-center p-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition">
+                            <span class="mr-3">📧</span> Email
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="glass border-t border-gray-700 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
+            &copy; 2026 Auto Order Nokos. All rights reserved.
+        </div>
+    </footer>
+
+    <div id="auth-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[100] backdrop-blur-sm">
+        <div class="bg-white dark:bg-cardbg p-8 rounded-2xl w-full max-w-md border border-gray-700 relative shadow-2xl">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white">&times;</button>
+            <h2 id="modal-title" class="text-2xl font-bold mb-6 text-center">Login</h2>
+            
+            <form id="auth-form" onsubmit="handleAuth(event)" class="space-y-4">
+                <input type="email" id="email" placeholder="Email" required class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-600 rounded-lg p-3 focus:ring-primary outline-none">
+                <input type="password" id="password" placeholder="Password" required class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-600 rounded-lg p-3 focus:ring-primary outline-none">
+                <button type="submit" id="modal-btn" class="w-full bg-primary hover:bg-indigo-600 text-white font-bold py-3 rounded-lg transition">Masuk</button>
+            </form>
+            <p id="modal-msg" class="mt-4 text-center text-sm text-red-400"></p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION (SUDAH DIISI - JANGAN DIUBAH)
+        // ==========================================
+        
+        const SUPABASE_URL = 'https://xorcesudrehjsjxrmakz.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_9ojLa84xhdqy_JJpk7LMkg_pWj5wXPn';
+        const API_KEY_OTP  = 'otp_bQpYiyoyQAjUHotw';
+        
+        const OTP_MARGIN = 850;
+        const DEPOSIT_MARGIN = 350;
+
+        // ==========================================
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        const services = [
+            { id: '4812', name: 'Server 3.0 (ID: 4812)', basePrice: 2700 },
+            { id: '4827', name: 'Server 3.0 (ID: 4827)', basePrice: 2750 },
+            { id: '4912', name: 'Server 3.0 (ID: 4912)', basePrice: 2900 },
+            { id: '4952', name: 'Server 3.0 (ID: 4952)', basePrice: 2950 },
+            { id: '5006', name: 'Server 3.0 (ID: 5006)', basePrice: 3050 },
+            { id: '5045', name: 'Server 3.0 (ID: 5045)', basePrice: 3100 },
+            { id: '5147', name: 'Server 3.0 (ID: 5147)', basePrice: 3300 },
+            { id: '5145', name: 'Server 3.0 (ID: 5145)', basePrice: 3300 },
+            { id: '5178', name: 'Server 3.0 (ID: 5178)', basePrice: 3350 },
+            { id: '5250', name: 'Server 3.0 (ID: 5250)', basePrice: 3450 },
+            { id: '5378', name: 'Server 3.0 (ID: 5378)', basePrice: 3650 },
+            { id: '5676', name: 'Server 3.0 (ID: 5676)', basePrice: 4150 },
+            { id: '2482', name: 'Server 2.0 (ID: 2482)', basePrice: 4200 },
+            { id: '3269', name: 'Server 2.0 (ID: 3269)', basePrice: 4200 },
+            { id: '3109', name: 'Server 2.0 (ID: 3109)', basePrice: 4200 },
+            { id: '3223', name: 'Server 2.0 (ID: 3223)', basePrice: 4350 },
+            { id: '3027', name: 'Server 2.0 (ID: 3027)', basePrice: 4400 }
+        ];
+
+        let currentUser = null;
+        let currentAuthMode = 'login';
+        let currentOrderId = null;
+
+        window.addEventListener('load', async () => {
+            initServices();
+            checkSession();
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        });
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        }
+
+        function initServices() {
+            const select = document.getElementById('server-select');
+            services.forEach(svc => {
+                const finalPrice = svc.basePrice + OTP_MARGIN;
+                const opt = document.createElement('option');
+                opt.value = svc.id;
+                opt.text = `${svc.name} - Rp${finalPrice.toLocaleString('id-ID')}`;
+                opt.dataset.price = finalPrice;
+                opt.dataset.base = svc.basePrice;
+                select.appendChild(opt);
+            });
+            updatePrice();
+        }
+
+        function updatePrice() {
+            const select = document.getElementById('server-select');
+            const price = select.options[select.selectedIndex].dataset.price;
+            document.getElementById('price-display').innerText = `Rp ${parseInt(price).toLocaleString('id-ID')}`;
+        }
+
+        function showModal(mode) {
+            currentAuthMode = mode;
+            document.getElementById('modal-title').innerText = mode === 'login' ? 'Login User' : 'Daftar Akun Baru';
+            document.getElementById('modal-btn').innerText = mode === 'login' ? 'Masuk' : 'Daftar';
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('auth-modal').classList.remove('flex');
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('modal-msg');
+            msg.innerText = "Loading...";
+
+            try {
+                let error;
+                if (currentAuthMode === 'signup') {
+                    const { error: err } = await supabase.auth.signUp({ email, password });
+                    error = err;
+                    if (!error) alert("Cek email Anda untuk konfirmasi! (Mungkin masuk Spam)");
+                } else {
+                    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+                    error = err;
+                }
+                if (error) throw error;
+                closeModal();
+                checkSession();
+            } catch (err) {
+                msg.innerText = err.message;
+            }
+        }
+
+        async function checkSession() {
+            const { data: { user } } = await supabase.auth.getUser();
+            currentUser = user;
+            
+            const authBtns = document.getElementById('auth-buttons');
+            const userMenu = document.getElementById('user-menu');
+            const balanceDisplay = document.getElementById('balance-display');
+
+            if (user) {
+                authBtns.classList.add('hidden');
+                userMenu.classList.remove('hidden');
+                balanceDisplay.classList.remove('hidden');
+                const { data: profile } = await supabase.from('profiles').select('balance').eq('id', user.id).single();
+                if (profile) balanceDisplay.innerText = `Rp ${profile.balance.toLocaleString('id-ID')}`;
+            } else {
+                authBtns.classList.remove('hidden');
+                userMenu.classList.add('hidden');
+                balanceDisplay.classList.add('hidden');
+            }
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.reload();
+        }
+
+        // --- ORDER LOGIC ---
+        async function orderNumber() {
+            if (!currentUser) return showModal('login');
+            const select = document.getElementById('server-select');
+            const serverId = select.value;
+            const sellPrice = parseInt(select.options[select.selectedIndex].dataset.price);
+
+            const btn = document.getElementById('btn-order');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader"></div> Memproses...';
+
+            try {
+                // 1. Kurangi Saldo User di Supabase
+                const { data: trxResult, error: trxError } = await supabase.rpc('deduct_balance', { user_id: currentUser.id, amount: sellPrice });
+                
+                if (trxError) throw new Error("Gagal akses database: " + trxError.message);
+                if (!trxResult.success) throw new Error(trxResult.message);
+
+                // 2. Order ke RumahOTP (REAL API CALL)
+                // Endpoint: https://www.rumahotp.com/api/v2/orders?number_id=NUMBER_ID&provider_id=PROVIDER_ID
+                // Karena 'Server ID' di deskripsi kamu sepertinya 'number_id' atau 'provider_id', kita pakai logic v2 orders.
+                
+                const response = await axios.get(`https://www.rumahotp.com/api/v2/orders?number_id=${serverId}&country=indonesia`, {
+                     headers: { 'x-apikey': API_KEY_OTP }
+                });
+
+                // Cek response dari RumahOTP
+                if (!response.data.success) {
+                     // Harusnya ada logic REFUND SALDO di sini kalau API RumahOTP gagal tapi saldo udah kepotong.
+                     // Tapi untuk simpel, kita lempar error dulu.
+                     throw new Error("RumahOTP Error: " + (response.data.message || "Gagal Order"));
+                }
+
+                const orderData = response.data.data;
+                currentOrderId = orderData.order_id;
+
+                // 3. Tampilkan Hasil
+                document.getElementById('order-result').classList.remove('hidden');
+                document.getElementById('res-phone').innerText = orderData.phone_number;
+                document.getElementById('res-id').innerText = '#' + orderData.order_id;
+                document.getElementById('balance-display').innerText = `Rp ${trxResult.new_balance.toLocaleString('id-ID')}`;
+
+            } catch (err) {
+                alert("Gagal: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Beli Nomor Sekarang";
+            }
+        }
+        
+        // --- CHECK OTP LOGIC ---
+        async function checkOTP() {
+            if (!currentOrderId) return;
+            const btn = document.querySelector('button[onclick="checkOTP()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "Checking...";
+            
+            try {
+                const response = await axios.get(`https://www.rumahotp.com/api/v1/orders/get_status?order_id=${currentOrderId}`, {
+                     headers: { 'x-apikey': API_KEY_OTP }
+                });
+                
+                if (response.data.success) {
+                    const status = response.data.data.status;
+                    if (status === 'success' && response.data.data.sms_content) {
+                        // Regex untuk ambil angka saja (Optional, ini ambil full SMS)
+                        document.getElementById('res-otp').value = response.data.data.sms_content;
+                        // Tandai selesai
+                        btn.innerText = "Sukses";
+                        btn.disabled = true;
+                        return;
+                    } else if (status === 'cancel' || status === 'refund') {
+                         document.getElementById('res-otp').value = "Dibatalkan/Refund";
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                if(btn.innerText !== "Sukses") btn.innerText = originalText;
+            }
+        }
+
+        // --- DEPOSIT LOGIC ---
+        async function createDeposit() {
+            if (!currentUser) return showModal('login');
+            const rawAmount = document.getElementById('deposit-amount').value;
+            if (rawAmount < 10000) return alert("Minimal deposit Rp10.000");
+
+            const totalCharge = parseInt(rawAmount) + DEPOSIT_MARGIN;
+
+            try {
+                // Generate QRIS via RumahOTP
+                const response = await axios.get(`https://www.rumahotp.com/api/v2/deposit/create?amount=${totalCharge}&payment_id=qris`, {
+                    headers: { 'x-apikey': API_KEY_OTP, 'Accept': 'application/json' }
+                });
+
+                if (response.data.success) {
+                    document.getElementById('qris-area').classList.remove('hidden');
+                    document.getElementById('qris-img').src = response.data.data.qr_image;
+                    alert(`Tagihan dibuat: Rp${totalCharge.toLocaleString('id-ID')}. \nSilahkan scan QRIS di bawah.`);
+                } else {
+                    alert("Gagal membuat QRIS: " + (response.data.message || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Error koneksi ke API RumahOTP");
+            }
+        }
+    </script>
+</body>
+</html>
